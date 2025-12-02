@@ -83,16 +83,16 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
                 self.sleep(0.4)
             return None
 
-        # 1. 找“病程记录”
+        # 找“病程记录”
         target_span = find_template("病程记录")
         if not target_span:
             raise Exception("未找到‘病程记录’")
 
-        # 2. 找到其父级 .tree-content
+        # 找到其父级 .tree-content
         parent_content = target_span.find_element(By.XPATH, "./ancestor::div[contains(@class, 'tree-content')][1]")
         print("找到‘病程记录’容器")
 
-        # 3. 找到展开图标（caret）
+        # 找到展开图标（caret）
         try:
             caret = parent_content.find_element(By.CSS_SELECTOR, ".node-icon.fa-caret-right")
         except:
@@ -101,7 +101,7 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
             except:
                 raise Exception("未找到展开图标")
 
-        # 4. 模拟点击 caret 图标
+        # 模拟点击 caret 图标
         self.driver.execute_script("""
                 const el = arguments[0];
                 const rect = el.getBoundingClientRect();
@@ -117,17 +117,17 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
         print("已点击展开图标，等待子项加载...")
         self.sleep(2.5)
 
-        # 5. 查找“日常病程记录”
+        # 查找“日常病程记录”
         daily_record = find_template("日常病程记录")
         if not daily_record:
             raise Exception("未找到‘日常病程记录’")
 
-        # 6. 点击文字本身（不是父容器）
+        # 点击文字本身（不是父容器）
         print("正在点击‘日常病程记录’文本...")
         self.driver.execute_script("arguments[0].click();", daily_record)
         self.sleep(1.2)
 
-        # 7. 点击“确认”按钮（用 JS 确保触发）
+        # 点击“确认”按钮（用 JS 确保触发）
         confirm_btn = WebDriverWait(modal_root, 10).until(
             EC.element_to_be_clickable((By.XPATH, ".//button[.//span[contains(., '确认')]]"))
         )
@@ -135,14 +135,14 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
         self.driver.execute_script("arguments[0].click();", confirm_btn)
         self.sleep(1.5)
 
-        # 8. 等待弹窗关闭
-        print("⏳ 等待模板弹窗关闭...")
+        # 等待弹窗关闭
+        print("等待模板弹窗关闭...")
         WebDriverWait(self.driver, 15).until(
             EC.invisibility_of_element_located((By.CSS_SELECTOR, "div.modal.show"))
         )
         print("模板弹窗已关闭")
 
-        # === 保存病历 ===
+        # 保存病历
         print("等待‘保存病历’按钮...")
         save_button = WebDriverWait(self.driver, 15).until(
             EC.element_to_be_clickable((By.XPATH, "//button[.//div[text()='保存病历']]"))
@@ -157,5 +157,6 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
 
         self.sleep(2)
         print("保存操作已完成")
+
 
 # locust -f test_EMR_zybladd.py

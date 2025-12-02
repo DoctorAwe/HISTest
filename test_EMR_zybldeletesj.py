@@ -50,13 +50,13 @@ class EMRInpatientCaseDelete(BaseSeleniumUser):
         # 点击住院病历
         inpatient_tab = self.wait_until(
             EC.element_to_be_clickable((By.XPATH, "//a[.//span[text()='住院病历']]")),
-            8
+            5
         )
         inpatient_tab.click()
         self.sleep(2)
 
         # 获取所有顶级病历分类
-        print("📂 获取所有顶级病历分类（level=0）...")
+        print("获取所有顶级病历分类（level=0）")
 
         all_contents = self.driver.find_elements(By.CSS_SELECTOR, "div.tree-content")
         top_level_nodes = []
@@ -168,9 +168,8 @@ class EMRInpatientCaseDelete(BaseSeleniumUser):
         time.sleep(0.5)
         self.driver.execute_script("arguments[0].click();", target_node["tree_node"])
         self.sleep(2)
-        # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-        # 4. 等待右侧加载所有“删除病历”按钮
+        # 等待加载病历
         print("等待右侧病历列表加载")
         delete_buttons = WebDriverWait(self.driver, 12).until(
             lambda d: d.find_elements(By.XPATH, "//button[.//div[text()='删除病历']]")
@@ -196,4 +195,5 @@ class EMRInpatientCaseDelete(BaseSeleniumUser):
         )
         self.driver.execute_script("arguments[0].click();", confirm_btn)
         print("已点击确定")
+
 

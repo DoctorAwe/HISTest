@@ -33,7 +33,7 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
             5
         )
 
-        # 选择患者（带【】标识）
+        # 选择患者
         patient_nodes = self.driver.find_elements(
             By.XPATH,
             "//div[@class='tree-node' and .//span[contains(text(), '【') and contains(text(), '】')]]"
@@ -46,14 +46,14 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
         selected_patient.click()
         self.sleep(1)
 
-        # 点击“住院病历”标签
+        # 住院病历
         inpatient_record_tab = self.wait_until(
             EC.element_to_be_clickable((By.XPATH, "//a[.//span[text()='住院病历']]")),
             5
         )
         inpatient_record_tab.click()
 
-        # 点击“新建病历”按钮
+        # 新建病历
         new_case_btn = self.wait_until(
             EC.element_to_be_clickable((By.XPATH, "//button[.//span[text()='新建病历']]")),
             5
@@ -61,10 +61,10 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
         new_case_btn.click()
         self.sleep(5)
 
-        # 1. 选择模板（仅选中，不确认）
+        # 选择模板（仅选中，不确认）
         self.select_random_template()
 
-        # 2. 点击 确认 关闭弹窗
+        # 点击 确认 关闭弹窗
         print("正在查找‘确认’按钮...")
         modal_root = WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div.modal.show"))
@@ -83,7 +83,7 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
         print("等待病历内容加载...")
         time.sleep(3)
 
-        # 3. 点击主页面 保存病历
+        # 点击主页面 保存病历
         print("正在查找‘保存病历’按钮...")
         save_button = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//button[.//div[text()='保存病历']]"))
@@ -91,7 +91,7 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
         self.driver.execute_script("arguments[0].click();", save_button)
         print("病历已成功保存！")
 
-        # 4. 判断保存结果
+        # 判断保存结果
         try:
             # 先检查是否出现“请选择一个标签” —— 表示病历已存在
             try:
@@ -116,7 +116,7 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
                     "//div[contains(@class, 'ant-message')]//span[contains(text(), '成功') or contains(text(), '保存成功')]"
                 ))
             )
-            print(f"🎉 保存成功！提示信息: {success_msg.text.strip()}")
+            print(f"保存成功！提示信息: {success_msg.text.strip()}")
             return  # 流程结束
 
         except Exception as e:
@@ -153,7 +153,7 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
 
     # 模板选择逻辑
     def select_random_template(self):
-        print("📂 开始选择病历模板...")
+        print("开始选择病历模板...")
 
         # 等待模板选择弹窗出现
         modal_root = WebDriverWait(self.driver, 5).until(
@@ -191,7 +191,7 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
                 caret = content.find_element(By.CSS_SELECTOR, ".node-icon.fa-caret-right")
                 self.driver.execute_script("arguments[0].click();", caret)
                 node_text = content.find_element(By.CSS_SELECTOR, 'span.tree-node-text').text
-                print(f"  → 展开节点: {node_text}")
+                print(f"展开节点: {node_text}")
 
                 # 等待加载图标消失
                 WebDriverWait(self.driver, 5).until(
@@ -206,7 +206,7 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
                 time.sleep(0.3)
                 return True
             except Exception as e:
-                print(f"  × 展开失败: {e}")
+                print(f"展开失败: {e}")
                 return False
 
         def get_child_nodes(parent_content):
@@ -238,40 +238,39 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
                     continue
             return children
 
-        # === 主选择逻辑 ===
+        # 主选择逻辑 
         top_nodes = find_top_level_nodes()
         if not top_nodes:
             raise Exception("未找到任何顶级模板节点")
 
         chosen_parent = random.choice(top_nodes)
-        print(f"  → 随机选择顶级模板: {chosen_parent['text']}")
+        print(f"随机选择顶级模板: {chosen_parent['text']}")
 
         target = None
         if can_expand(chosen_parent["content"]):
-            print("  → 尝试展开...")
+            print("尝试展开...")
             if expand_and_wait(chosen_parent["content"]):
                 child_nodes = get_child_nodes(chosen_parent["content"])
                 if child_nodes:
                     target = random.choice(child_nodes)
-                    print(f"  → 随机选择子模板: {target['text']}")
+                    print(f"随机选择子模板: {target['text']}")
                 else:
                     target = chosen_parent
-                    print("  → 无子节点，使用父节点")
+                    print("无子节点，使用父节点")
             else:
                 target = chosen_parent
-                print("  → 展开失败，使用父节点")
+                print("展开失败，使用父节点")
         else:
             target = chosen_parent
-            print("  → 节点不可展开，直接使用")
+            print("节点不可展开，直接使用")
 
         if not target:
             raise Exception("未能确定要点击的模板节点")
 
         # 安全点击选中模板
-        print(f"  → 点击选中模板: {target['text']}")
+        print(f"点击选中模板: {target['text']}")
         self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", target["tree_node"])
         time.sleep(0.3)
         self.driver.execute_script("arguments[0].click();", target["tree_node"])
 
-        # ✅ 关键：此处不关闭弹窗！不点击保存！
-        print("✅ 模板已选中，等待主流程点击【确认】")
+        print("模板已选中，等待主流程点击【确认】")

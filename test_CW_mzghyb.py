@@ -79,7 +79,7 @@ class CreateTempCard(BaseSeleniumUser):
         time.sleep(2)
         from pynput.keyboard import Controller as KeyboardController, Key
         kb = KeyboardController()
-        kb.type("52250120020820121x")
+        kb.type("52250120020820121x") # 秋宇的身份证号
 
         #回车
         kb.press(Key.enter)
@@ -199,3 +199,4 @@ class CreateTempCard(BaseSeleniumUser):
         time.sleep(10)
         print("医保挂号流程结束")
         # locust -f test_CW_mzghyb.py
+

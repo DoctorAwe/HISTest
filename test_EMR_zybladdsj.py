@@ -10,6 +10,8 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
     dept = "xwj"
     role = "zyys"
 
+    debug = False
+
     def on_get_user(self) -> Tuple[str, str]:
         return '898', '123456'
 
@@ -93,63 +95,43 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
 
         # 判断保存结果
         try:
-            # 先检查是否出现“请选择一个标签” —— 表示病历已存在
-            try:
-                warning_elements = self.driver.find_elements(
-                    By.XPATH,
-                    "//*[contains(text(), '请选择一个标签')]"
-                )
-                if warning_elements:
-                    msg_text = warning_elements[0].text.strip()
-                    print(f"检测到提示: {msg_text}")
-                    raise Exception(
-                        "模板已被建立：系统提示‘请选择一个标签’，说明该患者在此病历类型下已存在病历，无法重复新建")
-            except Exception as inner_e:
-                if "模板已被建立" in str(inner_e):
-                    raise  # 重新抛出我们的业务异常
-                # 否则继续检查其他情况
-
-            # 再检查是否保存成功
-            success_msg = WebDriverWait(self.driver, 8).until(
+            # 直接等待 class 包含 'alert-success' 的元素出现
+            success_element = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((
-                    By.XPATH,
-                    "//div[contains(@class, 'ant-message')]//span[contains(text(), '成功') or contains(text(), '保存成功')]"
+                    By.CSS_SELECTOR,
+                    ".alert.alert-success"  # 直接定位绿色的成功弹窗
                 ))
             )
-            print(f"保存成功！提示信息: {success_msg.text.strip()}")
-            return  # 流程结束
+
+            # 使用 textContent 可以忽略掉 html 注释，直接拿到纯文本
+            content = success_element.get_attribute("textContent").strip()
+            print(f"捕获到弹窗内容: '{content}'")
+
+            if "成功" in content:
+                print("保存成功！流程结束。")
+                return
+            else:
+                raise Exception(f"保存操作收到异常弹窗: {content}")
 
         except Exception as e:
-            if "模板已被建立" in str(e):
-                raise  # 直接抛出，不走下面的兜底
+            print(f"未检测到成功弹窗 (原因: {e})")
 
-            print("未检测到‘保存成功’提示，可能存在异常或失败。")
-            # 收集其他错误线索
-            error_hints = []
-
-            # 检查错误提示
             try:
-                err_msg = self.driver.find_element(By.XPATH, "//div[contains(@class, 'ant-message-error')]")
-                error_hints.append(f"错误提示: {err_msg.text}")
+                # 检查有没有红色的错误弹窗 (alert-danger 或类似的)
+                error_alert = self.driver.find_element(By.CSS_SELECTOR, ".alert.alert-danger")
+                print(f"检测到错误提示: {error_alert.get_attribute('textContent')}")
             except:
                 pass
 
-            # 检查是否有 modal 弹窗
-            try:
-                modal = self.driver.find_element(By.CSS_SELECTOR, "div.ant-modal-content")
-                error_hints.append(f"弹窗内容: {modal.text[:100]}...")
-            except:
-                pass
+            # 截图
+            timestamp = time.strftime("%H%M%S")
+            self.driver.save_screenshot(f"fail_alert_{timestamp}.png")
 
-            if error_hints:
-                print("检测到以下异常线索:")
-                for hint in error_hints:
-                    print(f"   • {hint}")
-            else:
-                print("未发现明显错误，但也未收到成功提示。")
+            # 再次检查是不是“请选择一个标签”那种纯文字提示
+            if "请选择一个标签" in self.driver.find_element(By.TAG_NAME, "body").text:
+                raise Exception("模板已被建立：检测到页面存在阻断提示")
 
-            raise Exception("保存病历失败：未收到成功提示，且非‘模板已存在’场景") from e
-
+            raise Exception("保存失败：未检测到 class='alert-success' 的成功弹窗") from e
 
     # 模板选择逻辑
     def select_random_template(self):
@@ -274,3 +256,4 @@ class EMRInpatientCaseCreate(BaseSeleniumUser):
         self.driver.execute_script("arguments[0].click();", target["tree_node"])
 
         print("模板已选中，等待主流程点击【确认】")
+
